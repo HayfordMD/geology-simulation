@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GeoGenesis 3D - Planetary Geology & Tectonic Globe Simulator</title>
+  <meta name="description" content="Simulate a 3D spherical planet over millions of years with plate tectonics, fault lines, core X-ray view, glacial ice ages, and mineral formation.">
+  <link rel="stylesheet" href="/styles/index.css">
+</head>
+<body>
+  <!-- 3D Canvas Host -->
+  <div id="canvas-container"></div>
+
+  <!-- TOP HEADER HUD -->
+  <header id="top-hud" class="glass">
+    <div class="brand-section" data-tooltip-title="GeoGenesis 3D" data-tooltip="Real-time planetary geodynamics simulator. Left-click to interact with tools, left-drag to rotate globe, right-drag to pan, scroll wheel to zoom.">
+      <div class="brand-logo">🪐</div>
+      <div>
+        <h1 class="brand-title">GEOGENESIS 3D</h1>
+        <div class="brand-sub">Spherical Planetary & Core Simulator</div>
+      </div>
+    </div>
+
+    <!-- Epoch & Climate Tracker -->
+    <div class="epoch-tracker" data-tooltip-title="Geological Time Tracker" data-tooltip="Displays the current geological epoch and planet age in Millions of Years (Ma). The progress bar fills as time advances toward the next era.">
+      <div class="epoch-badge">
+        <span id="hud-epoch-name" class="epoch-name">Hadean Eon</span>
+        <span id="hud-age" class="epoch-age">4540.0 Ma</span>
+        <span id="hud-climate" class="climate-badge" data-tooltip-title="Milankovitch Climate Cycle" data-tooltip="Global mean surface temperature. Periodically drops below 11°C during planetary orbital cycles, triggering Ice Ages with polar and mountain glaciation.">14°C</span>
+      </div>
+      <div class="epoch-progress-bar">
+        <div id="epoch-progress-fill" class="epoch-progress-fill"></div>
+      </div>
+    </div>
+
+    <!-- Time & Simulation Controls -->
+    <div class="time-controls">
+      <button id="btn-pause" class="ctrl-btn" data-tooltip-title="Pause Simulation" data-tooltip="Freeze or unfreeze geological time progression. Idle facilities and camera controls remain functional.">⏸ Pause</button>
+      <button id="btn-speed-1" class="time-btn active" data-scale="1" data-tooltip-title="Real-Time Base (1x)" data-tooltip="Simulates 10 geological years per real-world second. Best for observing micro-seismic activity and core drilling.">1x (10y/s)</button>
+      <button id="btn-speed-100" class="time-btn" data-scale="100" data-tooltip-title="Fast Drift (100x)" data-tooltip="Simulates 1,000 geological years per second. Plate drift and volcanic cooling become visibly dynamic.">100x</button>
+      <button id="btn-speed-10000" class="time-btn" data-scale="10000" data-tooltip-title="High Speed (10Kx)" data-tooltip="Simulates 100,000 geological years per second. Watch mountain ranges uplift and climate cycles oscillate.">10Kx</button>
+      <button id="btn-speed-warp" class="time-btn" data-scale="1000000" data-tooltip-title="Epoch Warp (10M yr/s)" data-tooltip="Simulates 10,000,000 years per second! Rapidly transition across geological eras with isostatically balanced erosion.">Epoch Warp</button>
+      <button id="btn-reset-cam" class="ctrl-btn" data-tooltip-title="Reset Camera" data-tooltip="Snap orbital camera back to default planetary overview angle.">🎥 Reset Cam</button>
+      <button id="btn-mute" class="ctrl-btn" data-tooltip-title="Audio Controls" data-tooltip="Toggle synthesized Web Audio seismic rumbles, volcanic explosions, and UI sound effects.">🔊 Audio</button>
+    </div>
+  </header>
+
+  <!-- TERRAIN & BIOME FILTER TOOLBAR -->
+  <nav id="biome-filter-bar" class="glass">
+    <div class="filter-label" data-tooltip-title="Terrain Filter Tool" data-tooltip="Select any category to isolate and spotlight that specific planetary land or sea zone in 3D, showing its coverage area.">
+      <span class="filter-icon">🔍</span>
+      <span>FILTERS:</span>
+    </div>
+    <div class="filter-chips">
+      <button class="filter-chip active" data-filter="all" data-tooltip-title="Natural Lithology" data-tooltip="Full planetary surface with true procedural lithology, ocean depths, and biome gradients.">🌍 All</button>
+      <button class="filter-chip" data-filter="deep_sea" data-tooltip-title="Deep Sea & Abyssal Plains" data-tooltip="Deep oceanic basins and trenches sitting on thin, dense basaltic oceanic crust (elevation < -0.10).">🌊 Deep Sea</button>
+      <button class="filter-chip" data-filter="shallow_sea" data-tooltip-title="Low-Level Shallow Seas" data-tooltip="Submerged continental shelves, shallow inland epi-continental seas, and coastal lagoons.">🏖️ Shallow Sea</button>
+      <button class="filter-chip" data-filter="rivers" data-tooltip-title="Rivers & Drainage Basins" data-tooltip="Fluvial river corridors, lowland drainage networks, and alluvial delta sediment deposits.">🏞️ Rivers</button>
+      <button class="filter-chip" data-filter="forest" data-tooltip-title="Forests & Plains" data-tooltip="Fertile temperate plains and woodlands with moderate elevation and balanced moisture.">🌲 Forests</button>
+      <button class="filter-chip" data-filter="desert" data-tooltip-title="Deserts & Arid Belts" data-tooltip="Dry subtropical high-pressure belts (15°-35° latitude) characterized by sand dunes and arid basins.">🏜️ Deserts</button>
+      <button class="filter-chip" data-filter="hills" data-tooltip-title="Hills & Rolling Uplands" data-tooltip="Elevated rolling hills and foothill plateaus (0.25 to 0.50 elevation with moderate slopes).">⛰️ Hills</button>
+      <button class="filter-chip" data-filter="cliffs" data-tooltip-title="Cliffs & Tectonic Scarps" data-tooltip="Sheer vertical rock faces, canyon walls, and active fault scarps created by tectonic displacement.">🧗 Cliffs</button>
+      <button class="filter-chip" data-filter="tropical" data-tooltip-title="Tropical Equatorial Zones" data-tooltip="Warm, high-humidity equatorial rainforest belts with intense biological cycling.">🌴 Tropical</button>
+    </div>
+    <div id="filter-telemetry" class="filter-telemetry" data-tooltip-title="Coverage Telemetry" data-tooltip="Real-time percentage and surface area of the active terrain classification across the planet.">
+      Coverage: 100% (510.1M km²)
+    </div>
+  </nav>
+
+  <!-- RESOURCE HUD -->
+  <div id="resource-bar">
+    <div class="resource-card glass" id="card-money" data-tooltip-title="Mineral Wealth ($)" data-tooltip="Extracted from prospecting core drills, diamond veins, and automated mining rigs. Used to purchase facility upgrades and technological research.">
+      <div class="resource-icon">🪙</div>
+      <div class="resource-info">
+        <span class="resource-label">Mineral Wealth</span>
+        <span class="resource-val" id="val-money">$0</span>
+        <span class="resource-rate" id="rate-money">+0/s</span>
+      </div>
+    </div>
+
+    <div class="resource-card glass" id="card-seismic" data-tooltip-title="Seismic Energy (MJ)" data-tooltip="Harvested from crustal friction, fault slip ruptures, and natural earthquakes. Essential for subduction anchors and piezo-grid upgrades.">
+      <div class="resource-icon">⚡</div>
+      <div class="resource-info">
+        <span class="resource-label">Seismic Energy</span>
+        <span class="resource-val" id="val-seismic">0 MJ</span>
+        <span class="resource-rate" id="rate-seismic">+0/s</span>
+      </div>
+    </div>
+
+    <div class="resource-card glass" id="card-geothermal" data-tooltip-title="Geothermal Heat (GW)" data-tooltip="Tapped from hot dry rock, magma chambers, and mantle plumes. Scales with volcanic activity and epoch thermal baseline.">
+      <div class="resource-icon">♨️</div>
+      <div class="resource-info">
+        <span class="resource-label">Geothermal Heat</span>
+        <span class="resource-val" id="val-geothermal">0 GW</span>
+        <span class="resource-rate" id="rate-geothermal">+0/s</span>
+      </div>
+    </div>
+
+    <div class="resource-card glass" id="card-research" data-tooltip-title="Research Points (RP)" data-tooltip="Acquired by observing geological milestones, discovering new rock strata, and analyzing core drill samples. Unlocks advanced tech tree items.">
+      <div class="resource-icon">🔬</div>
+      <div class="resource-info">
+        <span class="resource-label">Research Points</span>
+        <span class="resource-val" id="val-research">0 RP</span>
+        <span class="resource-rate" id="rate-research">+0/s</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- VISUAL OVERLAY MODES -->
+  <div id="overlay-menu" class="glass">
+    <button class="mode-btn active" id="mode-lithology" data-mode="lithology" data-tooltip-title="True Lithology" data-tooltip="Natural planetary surface view showing abyssal ocean floor, sandy beaches, vegetative plains, granitic highlands, and alpine snow.">🌍 Lithology</button>
+    <button class="mode-btn" id="mode-plates" data-mode="plates" data-tooltip-title="Tectonic Plates & Drift" data-tooltip="Color-codes crustal plates and renders 3D cyan arrows showing plate velocity and continental drift direction.">🗺️ Plates & Drift</button>
+    <button class="mode-btn" id="mode-stress" data-mode="stress" data-tooltip-title="Fault Line Stress Heatmap" data-tooltip="Displays fault lines color-coded by accumulated elastic shear strain from dormant green/amber to critical rupture red.">🔥 Fault Stress</button>
+    <button class="mode-btn" id="mode-minerals" data-mode="minerals" data-tooltip-title="Mineral Vein Radar" data-tooltip="Subsurface spectral scan highlighting precious veins: Gold (yellow), Diamonds (cyan), Lithium (aqua), and Iron (rust red).">💎 Mineral Radar</button>
+    <button class="ctrl-btn" id="btn-xray" data-tooltip-title="Planetary Core X-Ray" data-tooltip="Renders the crust transparent to inspect the solid white-hot inner core, swirling liquid outer core dynamo, and convective mantle.">🔬 Core X-Ray [OFF]</button>
+  </div>
+
+  <!-- GEOLOGIST TOOLBELT (INTERVENTIONS) -->
+  <div id="toolbelt" class="glass">
+    <button class="tool-btn active" id="tool-drill" data-tool="drill" data-tooltip-title="Core Drill Rig" data-tooltip="Click anywhere on the globe to drill down 35 km! Uncovers layered stratigraphic columns, borehole temperature, and extracts minerals.">
+      <span class="tool-icon">🔍</span>
+      <span class="tool-name">Core Drill</span>
+    </button>
+    <button class="tool-btn" id="tool-slip" data-tool="slip" data-tooltip-title="Trigger Fault Slip" data-tooltip="Click near any active plate boundary to force immediate tectonic shear displacement, unleashing a high-energy earthquake and harvesting MJ.">
+      <span class="tool-icon">⚡</span>
+      <span class="tool-name">Trigger Fault</span>
+    </button>
+    <button class="tool-btn" id="tool-volcano" data-tool="volcano" data-tooltip-title="Magma Plume Hotspot" data-tooltip="Click to inject an asthenospheric magma conduit, uplifting a volcanic cone, erupting basaltic lava, and generating geothermal heat.">
+      <span class="tool-icon">🌋</span>
+      <span class="tool-name">Magma Plume</span>
+    </button>
+    <button class="tool-btn" id="tool-ice" data-tool="ice" data-tooltip-title="Glacial Valley Carve" data-tooltip="Click mountainous terrain to trigger powerful glacial flows that scour broad U-shaped valleys and push moraine till downvalley.">
+      <span class="tool-icon">❄️</span>
+      <span class="tool-name">Glacial Carve</span>
+    </button>
+    <button class="tool-btn" id="tool-deluge" data-tool="deluge" data-tooltip-title="Fluvial Weathering" data-tooltip="Click to trigger torrential rainfall, eroding mountain peaks into branching river canyons and depositing sedimentary sandstone in ocean deltas.">
+      <span class="tool-icon">🌧️</span>
+      <span class="tool-name">Weathering</span>
+    </button>
+    <button class="tool-btn" id="tool-meteor" data-tool="meteor" data-tooltip-title="Meteorite Impact" data-tooltip="Click to blast the planet with a hypervelocity impact crater, inducing extreme shock metamorphism (diamond synthesis) and seismic waves.">
+      <span class="tool-icon">☄️</span>
+      <span class="tool-name">Meteor Impact</span>
+    </button>
+  </div>
+
+  <!-- SIDE DECK CONTROL PANEL -->
+  <aside id="side-deck" class="glass">
+    <div class="deck-header">
+      <span class="deck-title" data-tooltip-title="Operations Deck" data-tooltip="Manage automated idle facilities, unlock geological tech, explore cataloged minerals, and track plate kinematics.">Geological Operations</span>
+      <button id="btn-toggle-panel" class="ctrl-btn" data-tooltip-title="Toggle Side Deck" data-tooltip="Collapse or expand the Geological Operations sidebar.">▶ Hide</button>
+    </div>
+
+    <nav class="deck-tabs">
+      <button class="tab-btn active" data-tab="facilities" id="tab-btn-facilities" data-tooltip-title="Idle Facilities" data-tooltip="Construct automated seismographs, geothermal boreholes, and core rigs that generate continuous passive revenue.">Facilities</button>
+      <button class="tab-btn" data-tab="tech" id="tab-btn-tech" data-tooltip-title="Research Tree" data-tooltip="Invest research points to unlock tectonic catalysts, automated fault strain venting, and deeper mineral extraction.">Research</button>
+      <button class="tab-btn" data-tab="minerals" id="tab-btn-minerals" data-tooltip-title="Lithosphere Compendium" data-tooltip="View all 15 discoverable minerals, rocks, hardness ratings, and geological formation criteria.">Minerals</button>
+      <button class="tab-btn" data-tab="plates" id="tab-btn-plates" data-tooltip-title="Plate Kinematics" data-tooltip="Live telemetry on all tectonic plates, boundary convergence speeds, and critical fault stress alerts.">Plates</button>
+    </nav>
+
+    <div class="deck-content">
+      <!-- Tab 1: Idle Facilities -->
+      <section class="tab-pane active" id="tab-facilities">
+        <div id="facilities-list"></div>
+      </section>
+
+      <!-- Tab 2: Research Tech -->
+      <section class="tab-pane" id="tab-tech">
+        <div id="tech-list"></div>
+      </section>
+
+      <!-- Tab 3: Mineral Compendium -->
+      <section class="tab-pane" id="tab-minerals">
+        <div id="compendium-stats" class="compendium-header"></div>
+        <div id="minerals-grid" class="minerals-grid"></div>
+      </section>
+
+      <!-- Tab 4: Plate Intel -->
+      <section class="tab-pane" id="tab-plates">
+        <div id="fault-alert-box" class="alert-box"></div>
+        <div id="plate-intel-list"></div>
+      </section>
+    </div>
+  </aside>
+
+  <!-- CORE SAMPLE DRILL MODAL -->
+  <div id="drill-modal" class="glass">
+    <div class="modal-header">
+      <h2 class="modal-title">Stratigraphic Core Sample</h2>
+      <button id="btn-close-drill" class="btn-close" data-tooltip-title="Close Sample" data-tooltip="Close this stratigraphic borehole analysis">&times;</button>
+    </div>
+    <div class="drill-meta">
+      <div id="drill-coords">Location: Globe Lat 0°, Lon 0° | Elev: 0m</div>
+      <div id="drill-temp-press">Borehole Temp: 0°C | Lithostatic Pressure: 0 kbar</div>
+      <div id="drill-value" class="drill-reward">+$0 Wealth | +0 RP</div>
+    </div>
+    <div id="drill-strata-column" class="strata-column"></div>
+  </div>
+
+  <!-- EPOCH BANNER POPUP -->
+  <div id="epoch-banner-modal" class="glass">
+    <div id="banner-title" class="banner-epoch-name">Archean Eon</div>
+    <div id="banner-milestone" class="banner-milestone">Cratonic Stabilization & Banded Iron Precipitates</div>
+    <div id="banner-desc" class="banner-desc">First stable continental cratons form.</div>
+  </div>
+
+  <!-- TOAST FEED -->
+  <div id="toast-feed"></div>
+
+  <!-- Bootstrap App -->
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
